@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polyline, InfoWindow } from '@react-google-maps/api';
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyA3CzCZlkh_2xIEBnZTm2xDPaoN5N3pq_k";
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyA3CzCZlkh_2xIEBnZTm2xDPaoN5N3pq_k";
 
 const containerStyle = {
   width: '100%',
