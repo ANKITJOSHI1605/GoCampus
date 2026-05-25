@@ -1,8 +1,8 @@
 import { io } from 'socket.io-client';
 
-// Assuming the backend is running on standard local dev port 5001
+// Assuming the backend is running on standard local dev port 5005
 // Update this URL before deploying to production!
-const SOCKET_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : '');
+const SOCKET_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5005' : '');
 
 const socket = io(SOCKET_URL, {
   autoConnect: true,

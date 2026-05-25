@@ -21,7 +21,7 @@ const Login = () => {
       
       // Role-based routing
       if (result.role === 'admin') navigate('/admin');
-      else if (result.role === 'driver') navigate('/driver');
+      else if (result.role === 'driver' || result.role === 'conductor') navigate('/driver');
       else navigate('/student');
       
     } catch (err) {

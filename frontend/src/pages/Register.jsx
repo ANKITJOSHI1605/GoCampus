@@ -19,7 +19,7 @@ const Register = () => {
     setError('');
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : '')}/api/auth/register`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5005' : '')}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, role })
@@ -107,19 +107,7 @@ const Register = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Account Role</label>
-              <div className="mt-1">
-                <select
-                  value={role}
-                  onChange={e => setRole(e.target.value)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                >
-                  <option value="student">Student</option>
-                  <option value="driver">Driver</option>
-                </select>
-              </div>
-            </div>
+
 
             <div>
               <button

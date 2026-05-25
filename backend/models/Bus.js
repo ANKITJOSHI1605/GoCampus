@@ -10,6 +10,12 @@ const busSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  availableSeats: {
+    type: Number,
+    default: function() {
+      return this.capacity;
+    }
+  },
   driverName: {
     type: String,
     required: true,
@@ -25,6 +31,10 @@ const busSchema = new mongoose.Schema({
   },
   route: {
     type: String, // String representation for simplicity initially
+  },
+  busCode: {
+    type: String,
+    default: '',
   },
   lastUpdated: {
     type: Date,

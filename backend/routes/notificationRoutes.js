@@ -25,4 +25,18 @@ router.post('/', async (req, res) => {
   }
 });
 
+// @route   DELETE /api/notifications/:id
+// @desc    Delete a notification
+router.delete('/:id', async (req, res) => {
+  try {
+    const notification = await Notification.findByIdAndDelete(req.params.id);
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+    res.json({ message: 'Notification removed' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

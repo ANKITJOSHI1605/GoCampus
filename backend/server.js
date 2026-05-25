@@ -24,6 +24,7 @@ const io = new Server(server, {
     methods: ["GET", "POST", "PUT", "DELETE"]
   }
 });
+app.set('io', io);
 
 // Connect Database
 connectDB();
@@ -39,10 +40,10 @@ app.use(helmet({ contentSecurityPolicy: false }));
 // Prevent NoSQL injection
 app.use(mongoSanitize()); 
 
-// Rate limiting (100 requests per 10 minutes)
+// Relax rate limiting for campus scale (10,000 requests per 10 minutes per IP to support NAT and multi-client testing)
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000, 
-  max: 100 
+  max: 10000 
 });
 app.use('/api', limiter);
 
@@ -55,6 +56,7 @@ app.use('/api/buses', require('./routes/busRoutes'));
 app.use('/api/routes', require('./routes/routeRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/settings', require('./routes/settings'));
 
 // Temporary endpoint to seed database
 app.get('/api/seed', async (req, res) => {
@@ -62,18 +64,65 @@ app.get('/api/seed', async (req, res) => {
     const bcrypt = require('bcryptjs');
     const User = require('./models/User');
     const Bus = require('./models/Bus');
+    const Notification = require('./models/Notification');
     const salt = await bcrypt.genSalt(10);
     const password = await bcrypt.hash('123456', salt);
 
-    const userCount = await User.countDocuments();
-    if (userCount === 0) {
-      await User.insertMany([
-        { name: 'Admin User', email: 'admin@gocampus.com', password, role: 'admin' },
-        { name: 'Driver User', email: 'driver@gocampus.com', password, role: 'driver' },
-        { name: 'Student User', email: 'student@gocampus.com', password, role: 'student' }
-      ]);
-    }
-    res.send('<h1>Database Seeding Completed!</h1><p>You can now go back to the login page and log in as admin@gocampus.com with password 123456.</p>');
+    // Clear stale database collections
+    await User.deleteMany({});
+    await Bus.deleteMany({});
+    await Notification.deleteMany({});
+
+    // Seed aligned User Accounts
+    await User.insertMany([
+      { name: 'System Admin', email: 'admin@gocampus.com', password, role: 'admin' },
+      { name: 'Driver User', email: 'driver@gocampus.com', password, role: 'driver' },
+      { name: 'rajesh kumar', email: 'rajesh@gocampus.com', password, role: 'driver' },
+      { name: 'Student User', email: 'student@gocampus.com', password, role: 'student' },
+      { name: 'Rahul', email: 'rahul@gocampus.com', password, role: 'student' }
+    ]);
+
+    // Seed aligned active Buses
+    await Bus.insertMany([
+      {
+        busNumber: 'UK07-9012',
+        capacity: 19,
+        availableSeats: 19,
+        driverName: 'Driver User',
+        status: 'On Route',
+        route: 'ISBT to GEU',
+        currentLocation: { lat: 30.2686, lng: 78.0019 },
+        busCode: '22',
+        lastUpdated: new Date()
+      },
+      {
+        busNumber: 'UK07-1234',
+        capacity: 19,
+        availableSeats: 19,
+        driverName: 'rajesh kumar',
+        status: 'On Route',
+        route: 'Clock Tower to GEU',
+        currentLocation: { lat: 30.2720, lng: 77.9950 },
+        busCode: '3',
+        lastUpdated: new Date()
+      }
+    ]);
+
+    // Seed clean initial Notifications
+    await Notification.insertMany([
+      {
+        message: 'Revised bus schedule during final semester examinations is now active.',
+        type: 'info',
+        createdAt: new Date()
+      },
+      {
+        message: 'Slight delay expected on Vikasnagar route due to road maintenance.',
+        type: 'warning',
+        createdAt: new Date(Date.now() - 3600000)
+      }
+    ]);
+
+    res.send('<h1>Database Seeding Completed Successfully!</h1><p>The entire database has been cleared and repopulated with a clean, aligned, and matched dataset. You can now log in using <strong>admin@gocampus.com</strong> (admin) or <strong>driver@gocampus.com</strong> (driver) with password <strong>123456</strong>.</p>');
   } catch (err) {
     res.status(500).send('Error seeding database: ' + err.message);
   }
@@ -98,7 +147,15 @@ require('./sockets/socketHandler')(io);
 
 // Start Server
 const PORT = process.env.PORT || 5001;
-server.listen(PORT, () => {
-  // Log successful server initialization
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+});
+
+// Process-level crash prevention
+process.on('uncaughtException', (err) => {
+  console.error('CRITICAL: Uncaught Exception caught to prevent crash:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('CRITICAL: Unhandled Promise Rejection caught to prevent crash:', reason);
 });

@@ -1,30 +1,69 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Navbar from '../components/Navbar';
 import MapView from '../components/MapView';
+import ScheduleTable from '../components/ScheduleTable';
 import socket from '../services/socket';
+import { AuthContext } from '../context/AuthContext';
 
 const StudentDashboard = () => {
+  const { user } = useContext(AuthContext);
   const [activeBuses, setActiveBuses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [settings, setSettings] = useState(null);
 
-  // GEU Campus Coordinates
-  const CAMPUS_LAT = 30.2686;
-  const CAMPUS_LNG = 78.0019;
+  // New States for Geolocation & Waiting
+  const [userLocation, setUserLocation] = useState(null);
+  const [waitingForBus, setWaitingForBus] = useState(null);
+  const [waitRemaining, setWaitRemaining] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Haversine ETA Calculation
-  const calculateETA = (lat, lng) => {
-    if (!lat || !lng) return '--';
+  // GEU Campus Coordinates (fallback)
+  const CAMPUS_LAT = 30.2675;
+  const CAMPUS_LNG = 77.9959;
+
+  // Real-time clock effect
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Waitlist countdown effect (5 minutes = 300 seconds)
+  useEffect(() => {
+    if (waitingForBus && waitRemaining > 0) {
+      const timer = setInterval(() => {
+        setWaitRemaining(prev => {
+          if (prev <= 1) {
+            socket.emit('leaveWaitlist', { busId: waitingForBus });
+            setWaitingForBus(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [waitingForBus, waitRemaining]);
+
+  // Helper to calculate exact distance in KM between two lat/lng points
+  const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
+    if (!lat1 || !lng1 || !lat2 || !lng2) return Infinity;
     const R = 6371; // Earth's radius in km
-    const dLat = (CAMPUS_LAT - lat) * (Math.PI / 180);
-    const dLng = (CAMPUS_LNG - lng) * (Math.PI / 180);
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLng = (lng2 - lng1) * (Math.PI / 180);
     const a = 
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat * (Math.PI / 180)) * Math.cos(CAMPUS_LAT * (Math.PI / 180)) * 
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
       Math.sin(dLng / 2) * Math.sin(dLng / 2); 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-    const distanceKm = R * c; 
+    return R * c; 
+  };
+
+  // Haversine ETA Calculation from Student Location
+  const calculateETA = (lat, lng) => {
+    if (!lat || !lng || !userLocation) return '--';
+    const distanceKm = calculateDistanceKm(lat, lng, userLocation.lat, userLocation.lng);
     
     // Assume average city speed 20km/h
     const timeHours = distanceKm / 20;
@@ -33,34 +72,61 @@ const StudentDashboard = () => {
   };
 
   useEffect(() => {
+    // Start tracking user location
+    let watchId;
+    if (navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => console.warn('Geolocation error:', err),
+        { enableHighAccuracy: true, maximumAge: 5000 }
+      );
+    }
+
     const fetchBuses = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : '')}/api/buses`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5005' : '')}/api/buses`);
         const data = await response.json();
         
         const mapData = data
-          .filter(bus => bus.status === 'On Route')
+          .filter(bus => bus.currentLocation?.lat !== undefined && bus.currentLocation?.lng !== undefined)
           .map(bus => ({
             id: bus._id,
             busNumber: bus.busNumber,
+            busCode: bus.busCode || '',
             driverName: bus.driverName,
             route: bus.route,
             lat: bus.currentLocation?.lat,
-            lng: bus.currentLocation?.lng
+            lng: bus.currentLocation?.lng,
+            seats: bus.availableSeats,
+            routePath: bus.routePath || null
           }));
           
-        setActiveBuses(mapData);
-        setLoading(false);
+        // We do NOT call setActiveBuses(mapData) here so that the student map & live seat availability
+        // strictly represent the 100% real-time connected active fleet.
       } catch (err) {
-        console.error("Failed fetching routing data", err);
+        console.error('Failed to fetch buses:', err);
+      } finally {
         setLoading(false);
       }
     };
-    
+
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5005' : '')}/api/settings/schedule`);
+        const data = await response.json();
+        setSettings(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchSettings();
     fetchBuses();
 
     // Fetch Persistent Notifications
-    fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : '')}/api/notifications`)
+    fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5005' : '')}/api/notifications`)
       .then(res => res.json())
       .then(data => setNotifications(data))
       .catch(err => console.error(err));
@@ -77,34 +143,122 @@ const StudentDashboard = () => {
         if (exists) {
           return prevBuses.map(b => b.id === updatedBus.id ? { 
             ...b, 
-            lat: updatedBus.lat || b.lat, 
-            lng: updatedBus.lng || b.lng,
-            seats: updatedBus.seats !== undefined ? updatedBus.seats : b.seats
+            lat: updatedBus.lat !== undefined ? updatedBus.lat : b.lat, 
+            lng: updatedBus.lng !== undefined ? updatedBus.lng : b.lng,
+            seats: updatedBus.seats !== undefined ? updatedBus.seats : b.seats,
+            busNumber: updatedBus.busNumber || b.busNumber,
+            busCode: updatedBus.busCode !== undefined ? updatedBus.busCode : b.busCode,
+            driverName: updatedBus.driverName || b.driverName,
+            route: updatedBus.route || b.route,
+            routePath: updatedBus.routePath !== undefined ? updatedBus.routePath : b.routePath,
           } : b);
         } else {
-          return [...prevBuses, updatedBus];
+          // New bus came online
+          return [...prevBuses, {
+            id: updatedBus.id,
+            busNumber: updatedBus.busNumber || 'Unknown',
+            busCode: updatedBus.busCode || '',
+            driverName: updatedBus.driverName || 'Unknown',
+            route: updatedBus.route || 'Unassigned',
+            lat: updatedBus.lat,
+            lng: updatedBus.lng,
+            seats: updatedBus.seats,
+            routePath: updatedBus.routePath || null,
+          }];
         }
       });
+    };
+    
+    const handleWaitlistUpdate = (data) => {
+      if (waitingForBus && data.busId === waitingForBus) {
+        // Waitlist info
+      }
+    };
+    
+    const handleSettingsUpdate = (data) => {
+      setSettings(data);
+    };
+
+    const handleOnlineDriversList = (drivers) => {
+      const mapData = drivers.map(d => ({
+        id: d.busId,
+        busNumber: d.busNumber,
+        busCode: d.busCode || '',
+        driverName: d.driverName,
+        route: d.route || 'Unassigned',
+        lat: d.lat,
+        lng: d.lng,
+        seats: d.seats,
+        routePath: d.routePath || null
+      }));
+      setActiveBuses(mapData);
+    };
+
+    const handleDriverOffline = ({ busId }) => {
+      setActiveBuses(prev => prev.filter(b => b.id !== busId));
     };
 
     socket.on('busUpdate', handleBusUpdate);
     socket.on('adminAlert', handleAdminAlert);
+    socket.on('waitlistUpdate', handleWaitlistUpdate);
+    socket.on('scheduleUpdated', handleSettingsUpdate);
+    socket.on('onlineDriversList', handleOnlineDriversList);
+    socket.on('driverOffline', handleDriverOffline);
 
     return () => {
+       if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
        socket.off('busUpdate', handleBusUpdate);
        socket.off('adminAlert', handleAdminAlert);
+       socket.off('waitlistUpdate', handleWaitlistUpdate);
+       socket.off('scheduleUpdated', handleSettingsUpdate);
+       socket.off('onlineDriversList', handleOnlineDriversList);
+       socket.off('driverOffline', handleDriverOffline);
     };
-  }, []);
+  }, [waitingForBus]);
+
+  // Filter buses that are within 2km of user location
+  const nearbyBuses = activeBuses.filter(bus => {
+    if (!userLocation || !bus.lat || !bus.lng) return false;
+    const distance = calculateDistanceKm(bus.lat, bus.lng, userLocation.lat, userLocation.lng);
+    return distance <= 2.0;
+  });
+
+  // Dynamic Fallback: If no buses are within 2km, auto-detect and display all active fleet buses in real time
+  const busesToShow = nearbyBuses.length > 0 ? nearbyBuses : activeBuses;
+  const isShowingAllBuses = nearbyBuses.length === 0 && activeBuses.length > 0;
+
+  const handleWaitClick = (busId) => {
+    if (waitingForBus === busId) {
+      // Cancel waiting
+      socket.emit('leaveWaitlist', { busId });
+      setWaitingForBus(null);
+      setWaitRemaining(0);
+    } else {
+      // If already waiting for another bus, leave that one first
+      if (waitingForBus) {
+        socket.emit('leaveWaitlist', { busId: waitingForBus });
+      }
+      socket.emit('joinWaitlist', { busId });
+      setWaitingForBus(busId);
+      setWaitRemaining(300); // 5 minutes in seconds
+    }
+  };
+
+  const formatTimeRemaining = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar 
         role="Student" 
-        userName="Student User" 
+        userName={user?.name || 'Student'} 
         unreadCount={unreadCount} 
+        notifications={notifications}
         onNotificationClick={() => {
           setUnreadCount(0);
-          document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' });
         }}
       />
       
@@ -118,15 +272,15 @@ const StudentDashboard = () => {
               <p className="text-sm text-gray-500">View real-time locations of campus buses</p>
             </div>
             <div className="flex gap-2">
-              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium border border-green-200">
-                {activeBuses.length} Buses Active
-              </span>
+               <span className={`px-3 py-1 rounded-full text-xs md:text-sm font-semibold border ${isShowingAllBuses ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                 {isShowingAllBuses ? `${busesToShow.length} Active Fleet Buses` : `${busesToShow.length} Buses Active (Near 2km)`}
+               </span>
             </div>
           </div>
           
           <div className="flex-1 bg-white rounded-xl shadow-sm border overflow-hidden relative min-h-[350px] lg:min-h-[500px]">
             {/* Embedded MapView */}
-            <MapView buses={activeBuses} />
+            <MapView buses={busesToShow} userLocation={userLocation} showCampus={true} destinationLocation={settings?.destinationLocation} />
           </div>
         </div>
 
@@ -136,16 +290,18 @@ const StudentDashboard = () => {
           {/* Active Fleet Status */}
           <div className="bg-white p-5 rounded-xl shadow-sm border">
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-              🚍 Live Seat Availability
+              🚍 {isShowingAllBuses ? 'Live Seat Availability (Active Fleet)' : 'Live Seat Availability (Near 2km)'}
             </h3>
-            {activeBuses.length === 0 ? (
-                <p className="text-sm text-gray-500">No buses are actively broadcasting locations.</p>
+            {!userLocation ? (
+                <p className="text-sm text-yellow-600 font-medium animate-pulse">Acquiring your location to find nearby buses...</p>
+            ) : busesToShow.length === 0 ? (
+                <p className="text-sm text-gray-500">No active buses on route currently.</p>
             ) : (
                 <ul className="space-y-4">
-                  {activeBuses.map((bus) => (
+                  {busesToShow.map((bus) => (
                     <li key={bus.id} className="flex flex-col justify-start border-b pb-3 last:border-0 last:pb-0">
                       <div className="flex justify-between w-full items-center mb-1">
-                        <p className="font-bold text-sm text-blue-900">Bus {bus.busNumber || 'UK07'}</p>
+                        <p className="font-bold text-sm text-blue-900">Bus {bus.busCode ? `${bus.busCode} (${bus.busNumber})` : bus.busNumber || 'UK07'}</p>
                         <span className={`text-xs font-black shadow-sm px-2.5 py-1 rounded-md ${bus.seats > 5 ? 'bg-green-100 text-green-700 border border-green-200' : bus.seats > 0 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
                           {bus.seats !== undefined ? `${bus.seats} Seats Left` : '--'}
                         </span>
@@ -156,6 +312,14 @@ const StudentDashboard = () => {
                           ETA: {calculateETA(bus.lat, bus.lng)}
                         </p>
                       </div>
+                      <div className="mt-3 flex justify-end w-full">
+                        <button 
+                          onClick={() => handleWaitClick(bus.id)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded transition ${waitingForBus === bus.id ? 'bg-red-100 text-red-700 border border-red-200 hover:bg-red-200' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}
+                        >
+                          {waitingForBus === bus.id ? `Cancel Waiting (${formatTimeRemaining(waitRemaining)})` : 'Wait for this Bus'}
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -164,38 +328,21 @@ const StudentDashboard = () => {
 
           {/* Schedule Summary */}
           <div className="bg-white p-5 rounded-xl shadow-sm border">
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-              📅 Today's Schedule
+            <h3 className="font-bold text-gray-900 mb-4 flex items-center justify-between">
+              <span className="flex items-center gap-2">📅 Today's Schedule</span>
             </h3>
-            <ul className="space-y-3">
-              <li className="flex justify-between items-start border-b pb-2">
-                <div>
-                  <p className="font-semibold text-sm">ISBT to Campus</p>
-                  <p className="text-xs text-gray-500">Bus: UK07-1234</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-blue-600">08:30 AM</p>
-                </div>
-              </li>
-              <li className="flex justify-between items-start border-b pb-2">
-                <div>
-                  <p className="font-semibold text-sm">Clock Tower to Campus</p>
-                  <p className="text-xs text-gray-500">Bus: UK07-5678</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-blue-600">08:45 AM</p>
-                </div>
-              </li>
-              <li className="flex justify-between items-start">
-                <div>
-                  <p className="font-semibold text-sm">Campus to ISBT</p>
-                  <p className="text-xs text-gray-500">Evening Return</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-blue-600">04:30 PM</p>
-                </div>
-              </li>
-            </ul>
+            
+            {/* Real Date and Time */}
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4 text-center">
+              <p className="text-sm font-semibold text-blue-900">
+                {currentTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+              <p className="text-2xl font-black text-blue-600 mt-1" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {currentTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </p>
+            </div>
+
+            <ScheduleTable />
           </div>
 
           {/* Notifications */}
