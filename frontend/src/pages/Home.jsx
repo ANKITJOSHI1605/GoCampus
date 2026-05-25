@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const Home = () => {
+  const [activeFaq, setActiveFaq] = useState(null);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Navigation */}
@@ -81,6 +83,98 @@ const Home = () => {
               <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors">Smart Alerts</h3>
               <p className="text-gray-600 leading-relaxed">Get notified about delays, route diversions, or emergency updates immediately from the system.</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Meet the Team (About Us) Section */}
+      <div className="bg-gray-50 py-24 relative z-10 border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="inline-block py-1 px-3 rounded-full bg-blue-100 text-blue-700 text-xs font-bold tracking-wider mb-3">
+              👥 CORE TEAM
+            </span>
+            <h2 className="text-3xl font-extrabold text-gray-900">Alpha squad</h2>
+            <p className="text-gray-500 text-sm mt-2">The innovative minds designing the future of university transit.</p>
+            <div className="w-24 h-1 bg-blue-600 mx-auto mt-4 rounded-full"></div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              { name: 'Rahul Singh Bisht', role: 'Leader', badge: 'Team Lead', init: 'RB', color: 'from-blue-500 to-indigo-600' },
+              { name: 'Varun Vohra', role: 'Member', badge: 'Core Developer', init: 'VV', color: 'from-purple-500 to-indigo-600' },
+              { name: 'Ankit', role: 'Member', badge: 'Core Developer', init: 'AN', color: 'from-cyan-500 to-blue-600' },
+              { name: 'Akshit Thapliyal', role: 'Member', badge: 'Core Developer', init: 'AT', color: 'from-emerald-500 to-teal-600' }
+            ].map((member, idx) => (
+              <div key={idx} className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 text-center transform hover:-translate-y-1">
+                <div className={`w-24 h-24 mx-auto rounded-full bg-gradient-to-tr ${member.color} flex items-center justify-center text-white text-3xl font-bold shadow-md shadow-indigo-100 mb-6 group-hover:scale-105 transition-transform duration-300 relative`}>
+                  {member.init}
+                  <span className="absolute -bottom-1.5 px-3 py-0.5 bg-blue-600 text-white rounded-full text-[10px] font-black tracking-widest uppercase border-2 border-white shadow-sm">
+                    {member.role}
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">{member.name}</h3>
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mt-1">{member.badge}</p>
+                <div className="mt-4 pt-4 border-t border-gray-50 flex justify-center gap-4 text-gray-400 group-hover:text-blue-500 transition-colors">
+                  <span className="text-xs font-semibold">Alpha Squad System Specialist</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* FAQs Section */}
+      <div className="bg-white py-24 relative z-10 border-t border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="inline-block py-1 px-3 rounded-full bg-blue-100 text-blue-700 text-xs font-bold tracking-wider mb-3">
+              ❓ QUESTIONS
+            </span>
+            <h2 className="text-3xl font-extrabold text-gray-900">Frequently Asked Questions</h2>
+            <p className="text-gray-500 text-sm mt-2">Have a question? We have all the answers covered right here.</p>
+            <div className="w-24 h-1 bg-blue-600 mx-auto mt-4 rounded-full"></div>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                q: 'How does the real-time tracking work?',
+                a: 'GoCampus connects directly to the driver\'s console through active high-speed WebSockets. Geolocation updates are pushed instantly in-memory, ensuring sub-second sync latency for the students map.'
+              },
+              {
+                q: 'Are the shuttle arrival estimates (ETA) accurate?',
+                a: 'Yes! The ETA calculations are computed directly on our backend using real-time route geometry from our caching OSRM server, reflecting distance and average transit speeds.'
+              },
+              {
+                q: 'How do students join a shuttle waitlist?',
+                a: 'Students can check available seat counts live on their dashboard, and tap the "Join Waitlist" button to secure a booking slot for the incoming shuttle instantly.'
+              },
+              {
+                q: 'Who should I contact if I face a system issue?',
+                a: 'You can reach out directly to the Alpha Squad administrators or notify system support on campus. Driver console alerts and server logs are actively monitored.'
+              }
+            ].map((faq, idx) => {
+              const isOpen = activeFaq === idx;
+              return (
+                <div key={idx} className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50/50 hover:bg-white transition-colors duration-300">
+                  <button 
+                    onClick={() => setActiveFaq(isOpen ? null : idx)}
+                    className="w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none"
+                  >
+                    <span className="font-bold text-gray-900 text-base md:text-lg">{faq.q}</span>
+                    <span className={`text-xl transition-transform duration-300 text-blue-600 ${isOpen ? 'rotate-180' : ''}`}>
+                      ▼
+                    </span>
+                  </button>
+                  <div className={`transition-all duration-300 overflow-hidden ${isOpen ? 'max-h-40 border-t border-gray-100 bg-white' : 'max-h-0'}`}>
+                    <p className="px-6 py-5 text-gray-600 text-sm md:text-base leading-relaxed">
+                      {faq.a}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
