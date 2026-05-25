@@ -58,30 +58,54 @@ const Home = () => {
       <div className="bg-white py-24 relative z-10 border-t border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
+            <span className="inline-block py-1 px-3 rounded-full bg-blue-100 text-blue-700 text-xs font-bold tracking-wider mb-3">
+              ⚡ FEATURES
+            </span>
             <h2 className="text-3xl font-bold text-gray-900">Everything you need to move faster</h2>
             <div className="w-24 h-1 bg-blue-600 mx-auto mt-4 rounded-full"></div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div className="group p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:border-blue-200 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-blue-600 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
               <div className="w-16 h-16 bg-blue-50 group-hover:bg-blue-600 text-blue-600 group-hover:text-white rounded-2xl flex items-center justify-center mb-6 text-3xl transition-colors duration-300 shadow-sm">📍</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">Live Tracking</h3>
-              <p className="text-gray-600 leading-relaxed">See exactly where your bus is on the campus map in real-time through precise WebSockets.</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">Live GPS Tracking</h3>
+              <p className="text-gray-600 leading-relaxed">See exactly where your bus is on the campus map in real-time through precise, low-latency Socket.io pings.</p>
             </div>
             
-            <div className="group p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:indigo-200 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden delay-100">
+            <div className="group p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:border-indigo-200 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 to-indigo-600 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
               <div className="w-16 h-16 bg-indigo-50 group-hover:bg-indigo-600 text-indigo-600 group-hover:text-white rounded-2xl flex items-center justify-center mb-6 text-3xl transition-colors duration-300 shadow-sm">⏰</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors">Instant ETA</h3>
-              <p className="text-gray-600 leading-relaxed">Accurate arrival times calculated dynamically so you can optimize your schedule flawlessly.</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors">Instant ETA & Paths</h3>
+              <p className="text-gray-600 leading-relaxed">Accurate arrival times and premium blue path routing calculated dynamically using caching backend OSRM helpers.</p>
             </div>
             
-            <div className="group p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:purple-200 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden delay-200">
+            <div className="group p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:border-purple-200 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-purple-600 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
-              <div className="w-16 h-16 bg-purple-50 group-hover:bg-purple-600 text-purple-600 group-hover:text-white rounded-2xl flex items-center justify-center mb-6 text-3xl transition-colors duration-300 shadow-sm">🔔</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors">Smart Alerts</h3>
-              <p className="text-gray-600 leading-relaxed">Get notified about delays, route diversions, or emergency updates immediately from the system.</p>
+              <div className="w-16 h-16 bg-purple-50 group-hover:bg-purple-600 text-purple-600 group-hover:text-white rounded-2xl flex items-center justify-center mb-6 text-3xl transition-colors duration-300 shadow-sm">💺</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors">Smart Seating & Waitlists</h3>
+              <p className="text-gray-600 leading-relaxed">Monitor available seats live and instantly join or leave boarding queues from your dedicated student dashboard.</p>
+            </div>
+
+            <div className="group p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:border-cyan-200 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 to-cyan-600 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+              <div className="w-16 h-16 bg-cyan-50 group-hover:bg-cyan-600 text-cyan-600 group-hover:text-white rounded-2xl flex items-center justify-center mb-6 text-3xl transition-colors duration-300 shadow-sm">📅</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-cyan-600 transition-colors">Master Timetables</h3>
+              <p className="text-gray-600 leading-relaxed">Quickly toggle between Regular and Temporary Exam schedules to keep up-to-date with active campus transit timings.</p>
+            </div>
+
+            <div className="group p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:border-emerald-200 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-emerald-600 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+              <div className="w-16 h-16 bg-emerald-50 group-hover:bg-emerald-600 text-emerald-600 group-hover:text-white rounded-2xl flex items-center justify-center mb-6 text-3xl transition-colors duration-300 shadow-sm">🔔</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-emerald-600 transition-colors">Admin Emergency Broadcasts</h3>
+              <p className="text-gray-600 leading-relaxed">Receive instant system-wide push alerts regarding delays, route diversions, or emergency notices from system admins.</p>
+            </div>
+
+            <div className="group p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:border-amber-200 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-amber-600 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+              <div className="w-16 h-16 bg-amber-50 group-hover:bg-amber-600 text-amber-600 group-hover:text-white rounded-2xl flex items-center justify-center mb-6 text-3xl transition-colors duration-300 shadow-sm">📊</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-amber-600 transition-colors">Analytical CSV Reports</h3>
+              <p className="text-gray-600 leading-relaxed">Export formatted, ready-to-use CSV logs mapping transit performance, fleet stats, and active occupant logs seamlessly.</p>
             </div>
           </div>
         </div>
