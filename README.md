@@ -90,4 +90,4 @@ If you have seeded the database, you can log in with the following credentials (
 
 ---
 
-*Built for Graphic Era University* 🎓
+*Built for Graphic Era Hill University* 🎓
