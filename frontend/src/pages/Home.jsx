@@ -139,7 +139,8 @@ const Home = () => {
                 role: 'Member',
                 badge: 'Core Developer',
                 init: 'VV',
-                color: 'from-purple-500 to-indigo-600'
+                color: 'from-purple-500 to-indigo-600',
+                github: 'https://github.com/varun101005'
               },
               {
                 name: 'Ankit',
