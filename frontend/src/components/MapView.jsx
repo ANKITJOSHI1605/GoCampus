@@ -1,5 +1,20 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polyline, InfoWindow } from '@react-google-maps/api';
+import { MapContainer, TileLayer, Marker as LeafletMarker, Polyline as LeafletPolyline, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+const createEmojiIcon = (emoji) => L.divIcon({
+  html: `<div style="font-size: 24px; text-align: center; line-height: 1;">${emoji}</div>`,
+  className: 'custom-emoji-icon',
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+  popupAnchor: [0, -15]
+});
+
+const campusIcon = createEmojiIcon("🏫");
+const userIcon = createEmojiIcon("🧍");
+const busIcon = createEmojiIcon("🚌");
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyA3CzCZlkh_2xIEBnZTm2xDPaoN5N3pq_k";
 
@@ -36,7 +51,7 @@ const getBusColor = (busId, totalBusesCount) => {
 };
 
 const MapView = ({ buses = [], center, showCampus = true, userLocation = null, destinationLocation = { lat: 30.2675, lng: 77.9959, name: 'Graphic Era Hill University' } }) => {
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries
@@ -63,7 +78,7 @@ const MapView = ({ buses = [], center, showCampus = true, userLocation = null, d
 
   // Fetch proper street directions using modern, zero-dependency OSRM API (client-side fallback)
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded && !loadError) return;
 
     validBuses.forEach(async (bus) => {
       // If the bus already has routePath supplied by the backend, skip client-side fetch entirely!
@@ -150,7 +165,7 @@ const MapView = ({ buses = [], center, showCampus = true, userLocation = null, d
 
   // Fit bounds whenever buses update
   useEffect(() => {
-    if (!map || !window.google) return;
+    if (loadError || !map || !window.google) return;
 
     const bounds = new window.google.maps.LatLngBounds();
     let hasPoints = false;
@@ -175,13 +190,89 @@ const MapView = ({ buses = [], center, showCampus = true, userLocation = null, d
     }
   }, [map, validBuses, userLocation, showCampus, destinationLocation?.lat, destinationLocation?.lng]);
 
-  if (!isLoaded) {
-    return <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-gray-50 rounded-lg border font-semibold text-gray-500 shadow-sm">Loading Google Maps...</div>;
-  }
-
   const initialCenter = center && Array.isArray(center) && center.length === 2 
     ? { lat: center[0], lng: center[1] } 
     : defaultCenter;
+
+  if (loadError) {
+    return (
+      <div className="w-full h-full min-h-[400px] relative rounded-lg overflow-hidden border shadow-sm z-0" style={{ zIndex: 0 }}>
+        <MapContainer center={[initialCenter.lat, initialCenter.lng]} zoom={14} style={{ width: '100%', height: '100%', minHeight: '400px', zIndex: 0 }}>
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          
+          {showCampus && destinationLocation && destinationLocation.lat !== undefined && destinationLocation.lng !== undefined && (
+            <LeafletMarker position={[destinationLocation.lat, destinationLocation.lng]} icon={campusIcon}>
+              <Popup>
+                <div className="font-sans">
+                  <h3 className="font-bold text-gray-900 border-b pb-1 mb-1">🏫 {destinationLocation.name || "Campus Destination"}</h3>
+                  <p className="text-sm text-gray-600">Destination Location</p>
+                </div>
+              </Popup>
+            </LeafletMarker>
+          )}
+
+          {userLocation && userLocation.lat !== undefined && userLocation.lng !== undefined && (
+            <LeafletMarker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
+              <Popup>
+                <div className="font-sans">
+                  <h3 className="font-bold text-gray-900 border-b pb-1 mb-1">🧍 Your Location</h3>
+                  <p className="text-sm text-gray-600">Waiting Point</p>
+                </div>
+              </Popup>
+            </LeafletMarker>
+          )}
+
+          {validBuses.map((bus) => {
+            const path = bus.routePath || routePaths[bus.id]?.path || [
+              { lat: bus.lat, lng: bus.lng },
+              { lat: destinationLocation?.lat || 30.2675, lng: destinationLocation?.lng || 77.9959 }
+            ];
+            const leafletPath = path.map(p => [p.lat, p.lng]);
+
+            return (
+              <React.Fragment key={bus.id}>
+                <LeafletPolyline 
+                  positions={leafletPath} 
+                  pathOptions={{ 
+                    color: getBusColor(bus.id, validBuses.length),
+                    weight: 5,
+                    opacity: 0.8
+                  }} 
+                />
+                
+                <LeafletMarker position={[bus.lat, bus.lng]} icon={busIcon}>
+                  <Popup>
+                    <div className="font-sans p-1">
+                      <h3 className="font-bold text-gray-900 border-b pb-1 mb-2">🚌 Bus {bus.busCode ? `${bus.busCode} (${bus.busNumber})` : bus.busNumber}</h3>
+                      <p className="text-sm text-gray-700 mb-1"><span className="font-semibold text-gray-900">Driver:</span> {bus.driverName}</p>
+                      <p className="text-sm text-gray-700 mb-2"><span className="font-semibold text-gray-900">Route:</span> {bus.route || 'Unassigned'}</p>
+                      {bus.seats !== undefined && (
+                        <div className="bg-blue-50/50 rounded-lg border border-blue-100 p-2 flex justify-between items-center mt-2">
+                          <span className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Seats Available</span>
+                          <span className="text-lg font-black text-blue-600">{bus.seats}</span>
+                        </div>
+                      )}
+                      <div className="mt-3 flex items-center gap-1.5 bg-green-50 rounded-full px-2 py-1 w-fit border border-green-100">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block animate-pulse"></span>
+                        <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Live GPS</span>
+                      </div>
+                    </div>
+                  </Popup>
+                </LeafletMarker>
+              </React.Fragment>
+            );
+          })}
+        </MapContainer>
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
+    return <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-gray-50 rounded-lg border font-semibold text-gray-500 shadow-sm">Loading Maps...</div>;
+  }
 
   return (
     <div className="w-full h-full min-h-[400px] relative rounded-lg overflow-hidden border shadow-sm">
