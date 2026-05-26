@@ -97,6 +97,13 @@ const MapView = ({ buses = [], center, showCampus = true, userLocation = null, d
         const url = `https://router.project-osrm.org/route/v1/driving/${bus.lng},${bus.lat};${destLng},${destLat}?overview=full&geometries=geojson`;
         
         const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`OSRM HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("OSRM didn't return JSON");
+        }
         const data = await response.json();
         
         if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
@@ -147,6 +154,14 @@ const MapView = ({ buses = [], center, showCampus = true, userLocation = null, d
           },
           body: JSON.stringify(requestBody)
         });
+
+        if (!response.ok) {
+          throw new Error(`Google Maps HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Google Maps didn't return JSON");
+        }
 
         const data = await response.json();
         if (data.routes && data.routes.length > 0) {

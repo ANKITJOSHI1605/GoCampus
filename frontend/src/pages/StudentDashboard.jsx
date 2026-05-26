@@ -87,6 +87,9 @@ const StudentDashboard = () => {
     const fetchBuses = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5005' : '')}/api/buses`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) throw new Error("Not JSON");
         const data = await response.json();
         
         const mapData = data
@@ -115,6 +118,9 @@ const StudentDashboard = () => {
     const fetchSettings = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5005' : '')}/api/settings/schedule`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) throw new Error("Not JSON");
         const data = await response.json();
         setSettings(data);
       } catch (err) {
@@ -127,7 +133,12 @@ const StudentDashboard = () => {
 
     // Fetch Persistent Notifications
     fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5005' : '')}/api/notifications`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) throw new Error("Not JSON");
+        return res.json();
+      })
       .then(data => setNotifications(data))
       .catch(err => console.error(err));
     
