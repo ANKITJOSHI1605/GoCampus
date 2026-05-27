@@ -29,7 +29,7 @@ router.put('/:id', async (req, res) => {
   try {
     const bus = await Bus.findByIdAndUpdate(
       req.params.id, 
-      req.body, 
+      req.body,  
       { new: true }
     );
     res.json(bus);
