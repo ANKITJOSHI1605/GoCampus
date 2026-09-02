@@ -16,7 +16,7 @@ const campusIcon = createEmojiIcon("🏫");
 const userIcon = createEmojiIcon("🧍");
 const busIcon = createEmojiIcon("🚌");
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyA3CzCZlkh_2xIEBnZTm2xDPaoN5N3pq_k";
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 const containerStyle = {
   width: '100%',

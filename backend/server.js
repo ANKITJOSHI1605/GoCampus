@@ -18,9 +18,13 @@ const app = express();
 const server = http.createServer(app);
 
 // Initialize Socket.io
+const allowedOrigins = (process.env.CLIENT_ORIGINS || 'http://localhost:5173')
+  .split(',')
+  .map(origin => origin.trim());
+
 const io = new Server(server, {
   cors: {
-    origin: "*", 
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE"]
   }
 });
@@ -30,7 +34,7 @@ app.set('io', io);
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
 // Security Middleware
@@ -58,8 +62,15 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/settings', require('./routes/settings'));
 
-// Temporary endpoint to seed database
-app.get('/api/seed', async (req, res) => {
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', uptime: Math.round(process.uptime()) });
+});
+
+// Explicitly protected development/demo database seeding endpoint.
+app.post('/api/seed', async (req, res) => {
+  if (!process.env.SEED_SECRET || req.get('x-seed-secret') !== process.env.SEED_SECRET) {
+    return res.status(403).json({ error: 'Database seeding is disabled.' });
+  }
   try {
     const bcrypt = require('bcryptjs');
     const User = require('./models/User');
@@ -122,9 +133,10 @@ app.get('/api/seed', async (req, res) => {
       }
     ]);
 
-    res.send('<h1>Database Seeding Completed Successfully!</h1><p>The entire database has been cleared and repopulated with a clean, aligned, and matched dataset. You can now log in using <strong>admin@gocampus.com</strong> (admin) or <strong>driver@gocampus.com</strong> (driver) with password <strong>123456</strong>.</p>');
+    res.json({ message: 'Database seeding completed successfully.' });
   } catch (err) {
-    res.status(500).send('Error seeding database: ' + err.message);
+    console.error('Database seeding failed:', err);
+    res.status(500).json({ error: 'Database seeding failed.' });
   }
 });
 

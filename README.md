@@ -45,7 +45,7 @@ Follow these instructions to run the application locally.
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/RahulSGits/GoCampus.git
+    git clone https://github.com/ANKITJOSHI1605/GoCampus.git
     cd GoCampus
     ```
 
@@ -89,5 +89,9 @@ If you have seeded the database, you can log in with the following credentials (
 *   `student@gocampus.com`
 
 ---
+
+## Environment variables
+
+Copy the supplied `.env.example` files and provide your own MongoDB, JWT and mapping credentials. Never commit real secrets.
 
 *Built for Graphic Era Hill University* 🎓
